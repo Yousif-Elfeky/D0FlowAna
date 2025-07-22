@@ -71,12 +71,12 @@ Int_t StPicoDstarMixedMaker::Init()
     fKaon_up = new TF1("fKaon_up", "(x<=2.5)*(6.129-1.9316*x)+\(x>2.5)*(1.3)", 0.2, 20.);
     fKaon_low = new TF1("fKaon_low", "(x<=1.7)*(-7.54+5.83*x-1.31*x*x)+\(x>1.7)*(-1.4149)", 0.2, 20.);
 
-    for (int i = 0; i < 590; i++) {
+    for (int i = 0; i < nBuf; i++) {
         BufferEvent_NEvents[i] = 0;
         BufferEvent_Full[i] = 0;
     }
     
-    for (int i = 0; i < 2950; i++) {
+    for (int i = 0; i < iBuf; i++) {
         BufferEvent_nPions[i] = 0;
         BufferEvent_nKaons[i] = 0;
 		BufferEvent_Id[i] = 0;
@@ -303,8 +303,13 @@ Int_t StPicoDstarMixedMaker::Make()
 	float eventPlane = calcEventPlane(picoDst, picoEvent, 2);
     hEventPlane->Fill(eventPlane);
 	int mEventPlaneIndex = (int)(eventPlane / TMath::Pi() * 6);
-
-    BufferPointer = mEventPlaneIndex*100+mCent*10 + CurrentEvent_Vz;
+    /*
+    IMPORTANTE: The Buffer is a unique 3-digit number
+    the fisrt digit from the left is the event plain index(0-5)
+    the second digit is the centralty bin (0-8)
+    the thrid digit is the vZ(0-9) each vZ is 6cm
+    */
+    BufferPointer = mEventPlaneIndex*100+mCent*10 + CurrentEvent_Vz; 
 	CurrentEvent_nPions = 0;
     CurrentEvent_nKaons = 0;
     int nTracks = picoDst->numberOfTracks();
@@ -317,7 +322,7 @@ Int_t StPicoDstarMixedMaker::Make()
         if(trk->isTofTrack()){
             StPicoBTofPidTraits const* const  tofPid = picoDst->btofPidTraits(index2tof);
             float tofylocal = tofPid->btofYLocal();
-            if (fabs(tofylocal) > 1.8)  continue;
+            if (fabs(tofylocal) > yLocalCut)  continue;
         }
         mcharge = trk->charge();
         nsigpi = trk->nSigmaPion();

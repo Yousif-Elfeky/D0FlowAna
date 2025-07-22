@@ -16,7 +16,8 @@
 #include "TH2.h"
 #include "TH3.h"
 #include "THn.h"
-
+#include "THnSparse.h" // --- ADDED FOR V_N ANALYSIS ---
+#include "TVector2.h" // --- ADDED FOR V_N ANALYSIS ---
 #include "TF1.h"
 #include "TVector3.h"
 class TString;
@@ -54,13 +55,16 @@ class StPicoDstarMixedMaker : public StMaker
     void makemixevent();
     void copyToBuffer();
     float calcEventPlane(StPicoDst const* const picoDst, StPicoEvent const* picoEvent, const int n) const;
-	void calculateHadronV2(StPicoEvent const* const picoEvent,std::map<int,int> runnum) const;
+	  void calculateHadronV2(StPicoEvent const* const picoEvent,std::map<int,int> runnum) const;
     TVector2 QEtaGap(int iEta, int nEtaGaps) const;
     StPicoDstMaker* mPicoDstMaker;
     StRefMultCorr* refmultCorrUtil;
     TString mInputFilesList;
     TString mOutFileBaseName;
     bool isBadrun(Int_t runId);
+    // --- ADDED FOR V_N ANALYSIS ---
+    void getQVectors(StPicoDst const* picoDst, TVector2 Q[3], int n) const;
+    void calculateEventPlaneResolution();
     
     // -------------- USER variables -------------------------
     // add your member variables here. 
@@ -76,6 +80,7 @@ class StPicoDstarMixedMaker : public StMaker
 
     void getBadruns(string inputFileName);
   private: 
+  
     TFile* mFile;
 
     std::map<int,int> runnum;
@@ -129,7 +134,15 @@ class StPicoDstarMixedMaker : public StMaker
     float weight;
     float mRefmult;
 
-    
+    // --- ADDED FOR V_N ANALYSIS ---
+    TVector2 mEventPlaneV1[3]; // 0: eta<neg_gap, 1: eta>pos_gap, 2: full
+    TVector2 mEventPlaneV2[3];
+    TProfile *hCos_v1_ab, *hCos_v1_ac, *hCos_v1_bc;
+    TProfile *hCos_v2_ab, *hCos_v2_ac, *hCos_v2_bc;
+    TH1F *hEventPlaneRes_v1, *hEventPlaneRes_v2;
+    THnSparseF *hD0_v1_UL, *hD0_v1_LS, *hD0_v1_MixUL, *hD0_v1_MixLS;
+    THnSparseF *hD0_v2_UL, *hD0_v2_LS, *hD0_v2_MixUL, *hD0_v2_MixLS;
+
     //float M_pion=0.139570;//GeV
     float PI;
     float twoPI;

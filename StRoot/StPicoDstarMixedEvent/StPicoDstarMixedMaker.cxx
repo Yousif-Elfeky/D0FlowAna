@@ -178,6 +178,8 @@ void StPicoDstarMixedMaker::initHists(){
 //-----------------------------------------------------------------------------
 Int_t StPicoDstarMixedMaker::Finish()
 {
+    calculateEventPlaneResolution();
+
     mFile->cd();
     if (mRunbyRunQVector) {
 

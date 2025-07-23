@@ -360,7 +360,7 @@ Int_t StPicoDstarMixedMaker::Make()
         StPicoTrack* trk = picoDst->track(l);
         bool isprimary = trk -> isPrimary();
         if(!isprimary) continue;
-        if (!isGoodTrack(trk, picoEvent,1)) continue;
+        if (!isGoodTrack(trk, picoEvent,2)) continue;
         int index2tof = trk->bTofPidTraitsIndex();
         if(trk->isTofTrack()){
             StPicoBTofPidTraits const* const  tofPid = picoDst->btofPidTraits(index2tof);

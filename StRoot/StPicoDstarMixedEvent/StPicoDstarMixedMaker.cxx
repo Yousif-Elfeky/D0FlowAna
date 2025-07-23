@@ -34,6 +34,8 @@
 #include "TRandom3.h"
 #include "StRefMultCorr/StRefMultCorr.h"
 #include "StRefMultCorr/CentralityMaker.h"
+#include "../StPicoCharmContainers/StKaonPion.h"
+
 #define piMass 0.13957
 #define kMass  0.493677
 #define massRes 0.013
@@ -150,12 +152,10 @@ void StPicoDstarMixedMaker::initHists(){
     hCos_v1_ab = new TProfile("hCos_v1_ab", "cent vs <cos(1(#Psi_{a}-#Psi_{b}))>", 9, 0, 9);
     hCos_v1_ac = new TProfile("hCos_v1_ac", "cent vs <cos(1(#Psi_{a}-#Psi_{c}))>", 9, 0, 9);
     hCos_v1_bc = new TProfile("hCos_v1_bc", "cent vs <cos(1(#Psi_{b}-#Psi_{c}))>", 9, 0, 9);
-    hEventPlaneRes_v1 = new TH1F("hEventPlaneRes_v1", "Event Plane Resolution v1;cent;R_1", 9, 0, 9);
 
     hCos_v2_ab = new TProfile("hCos_v2_ab", "cent vs <cos(2(#Psi_{a}-#Psi_{b}))>", 9, 0, 9);
     hCos_v2_ac = new TProfile("hCos_v2_ac", "cent vs <cos(2(#Psi_{a}-#Psi_{c}))>", 9, 0, 9);
     hCos_v2_bc = new TProfile("hCos_v2_bc", "cent vs <cos(2(#Psi_{b}-#Psi_{c}))>", 9, 0, 9);
-    hEventPlaneRes_v2 = new TH1F("hEventPlaneRes_v2", "Event Plane Resolution v2;cent;R_2", 9, 0, 9);
 
     int    bins[4]    = {  9,  100,   50,   20};
     double xmin[4]    = {0.0,  0.0, 1.70,  0.0};
@@ -178,8 +178,6 @@ void StPicoDstarMixedMaker::initHists(){
 //-----------------------------------------------------------------------------
 Int_t StPicoDstarMixedMaker::Finish()
 {
-    calculateEventPlaneResolution();
-
     mFile->cd();
     if (mRunbyRunQVector) {
 
@@ -224,7 +222,6 @@ Int_t StPicoDstarMixedMaker::Finish()
     
     hCos_v1_ab->Write(); hCos_v1_ac->Write(); hCos_v1_bc->Write();
     hCos_v2_ab->Write(); hCos_v2_ac->Write(); hCos_v2_bc->Write();
-    hEventPlaneRes_v1->Write(); hEventPlaneRes_v2->Write();
     hD0_v1_UL->Write(); hD0_v1_LS->Write(); hD0_v1_MixUL->Write(); hD0_v1_MixLS->Write();
     hD0_v2_UL->Write(); hD0_v2_LS->Write(); hD0_v2_MixUL->Write(); hD0_v2_MixLS->Write();
         
@@ -363,7 +360,7 @@ Int_t StPicoDstarMixedMaker::Make()
         StPicoTrack* trk = picoDst->track(l);
         bool isprimary = trk -> isPrimary();
         if(!isprimary) continue;
-        if (!isGoodTrack(trk, picoEvent,2)) continue;
+        if (!isGoodTrack(trk, picoEvent,1)) continue;
         int index2tof = trk->bTofPidTraitsIndex();
         if(trk->isTofTrack()){
             StPicoBTofPidTraits const* const  tofPid = picoDst->btofPidTraits(index2tof);
@@ -426,7 +423,7 @@ Int_t StPicoDstarMixedMaker::Make()
     }
     
 	CurrentEvent_PairFound = false;
-    makerealevent();
+    makerealevent(picoDst);
     if (CurrentEvent_PairFound) {
         makemixevent();
         copyToBuffer();
@@ -463,7 +460,7 @@ bool StPicoDstarMixedMaker::isGoodTrack(StPicoTrack const* trk, StPicoEvent cons
     float ratio = fabs(nhits) / nhitmax;
     float dca = trk->gDCA(pVtx.x(), pVtx.y(), pVtx.z());
     if(index == 1){
-        if (pt<=anaCuts::minPtCut1 || pt>=anaCuts::maxPtCut1) return false;
+        if (pt<=anaCuts::minPtCut1) return false;
         else if (fabs(dca) > anaCuts::Dca1)   return false;
         else if (fabs(eta) >= anaCuts::EtaCut) return false;
         else if (fabs(nhits) < anaCuts::NHitsFit1) return false;
@@ -540,13 +537,17 @@ float StPicoDstarMixedMaker::getTofBeta(StPicoTrack const* const trk) const
 }
 */
 
-void StPicoDstarMixedMaker::makerealevent()
+void StPicoDstarMixedMaker::makerealevent(StPicoDst const* picoDst)
 {
+    TVector3 vtrx = picoDst->event()->primaryVertex();
+    float const bField = picoDst->event()->bField();
+
     TLorentzVector kFourMom(0, 0, 0, 0);
     TLorentzVector piFourMom(0, 0, 0, 0);
     TLorentzVector d0FourMom(0, 0, 0, 0);
     for (int i = 0; i < CurrentEvent_nKaons; i++) {
         int   kaonid = CurrentEvent_KaonId[i];
+        StPicoTrack const* kaonTrack = picoDst->track(kaonid);
         int   kaoncharge = CurrentEvent_KaonCharge[i];
         float kaonpx = CurrentEvent_KaonPx[i];
         float kaonpy = CurrentEvent_KaonPy[i];
@@ -556,6 +557,7 @@ void StPicoDstarMixedMaker::makerealevent()
         for (int j = 0; j < CurrentEvent_nPions; j++) {
             int pionid = CurrentEvent_PionId[j];
             if (kaonid == pionid) continue;
+            StPicoTrack const* pionTrack = picoDst->track(pionid);
             int   pioncharge = CurrentEvent_PionCharge[j];
             float pionpx = CurrentEvent_PionPx[j];
             float pionpy = CurrentEvent_PionPy[j];
@@ -564,6 +566,14 @@ void StPicoDstarMixedMaker::makerealevent()
             d0FourMom = kFourMom + piFourMom;
             float d0pt = d0FourMom.Pt();
             float d0m = d0FourMom.M();
+            StKaonPion kaonPion(*kaonTrack, *pionTrack, vtrx, bField);
+
+            if ((kaonPion.dcaDaughters() < D0_Cuts::DCA_12) &&
+            (kaonPion.decayLength() > D0_Cuts::DecayLength) &&
+            (cos(kaonPion.pointingAngle()) > D0_Cuts::cos_theta) &&
+            (kaonPion.kaonDca() > D0_Cuts::DCA_k) &&
+            (kaonPion.pionDca() > D0_Cuts::DCA_pi)){
+
             if(fabs(d0FourMom.Rapidity())>=anaCuts::D0yCut) continue;
             // --- ADDED FOR V_N ANALYSIS ---
             // Calculate dPhi and fill the new THnSparse histograms
@@ -611,8 +621,7 @@ void StPicoDstarMixedMaker::makerealevent()
                     hsmvsptcenNeg->Fill(mCent, d0pt, d0m,weight);
                     //hsmvsptcenNeg_No->Fill(mCent, d0pt, d0m);
                 }
-
-
+            }//endif
         }//pi
     }//k
 }
@@ -843,30 +852,5 @@ void StPicoDstarMixedMaker::getQVectors(StPicoDst const* picoDst, TVector2 Q[3],
         if (eta < -eta_gap) Q[0] += q_vec; // Sub-event A: eta < -gap
         if (eta >  eta_gap) Q[1] += q_vec; // Sub-event B: eta > +gap
         Q[2] += q_vec;                     // Sub-event C: Full TPC
-    }
-}
-
-void StPicoDstarMixedMaker::calculateEventPlaneResolution()
-{
-    for (int i = 0; i < 9; ++i) { // Loop over 9 centrality bins
-        // For v1
-        double v1_ab = hCos_v1_ab->GetBinContent(i + 1);
-        double v1_ac = hCos_v1_ac->GetBinContent(i + 1);
-        double v1_bc = hCos_v1_bc->GetBinContent(i + 1);
-        if (v1_ab * v1_ac * v1_bc > 0) {
-            double res1_A = sqrt(v1_ab * v1_ac / v1_bc);
-            hEventPlaneRes_v1->SetBinContent(i + 1, res1_A);
-            hEventPlaneRes_v1->SetBinError(i + 1, 0.0); // Error calculation is more complex
-        }
-        
-        // For v2
-        double v2_ab = hCos_v2_ab->GetBinContent(i + 1);
-        double v2_ac = hCos_v2_ac->GetBinContent(i + 1);
-        double v2_bc = hCos_v2_bc->GetBinContent(i + 1);
-        if (v2_ab * v2_ac * v2_bc > 0) {
-            double res2_A = sqrt(v2_ab * v2_ac / v2_bc);
-            hEventPlaneRes_v2->SetBinContent(i + 1, res2_A);
-            hEventPlaneRes_v2->SetBinError(i + 1, 0.0);
-        }
     }
 }

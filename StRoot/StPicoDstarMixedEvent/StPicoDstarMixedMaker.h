@@ -51,7 +51,7 @@ class StPicoDstarMixedMaker : public StMaker
     bool isGoodEvent(StPicoEvent const* const picoEvent) const;
     bool isGoodTrack(StPicoTrack const* trk,StPicoEvent const* picoEvent,int Index) const;
     float getTofBeta(StPicoTrack const* const trk) const;
-    void makerealevent();
+    void makerealevent(StPicoDst const* picoDst);
     void makemixevent();
     void copyToBuffer();
     float calcEventPlane(StPicoDst const* const picoDst, StPicoEvent const* picoEvent, const int n) const;
@@ -64,7 +64,6 @@ class StPicoDstarMixedMaker : public StMaker
     bool isBadrun(Int_t runId);
     // --- ADDED FOR V_N ANALYSIS ---
     void getQVectors(StPicoDst const* picoDst, TVector2 Q[3], int n) const;
-    void calculateEventPlaneResolution();
     
     // -------------- USER variables -------------------------
     // add your member variables here. 
@@ -139,7 +138,6 @@ class StPicoDstarMixedMaker : public StMaker
     TVector2 mEventPlaneV2[3];
     TProfile *hCos_v1_ab, *hCos_v1_ac, *hCos_v1_bc;
     TProfile *hCos_v2_ab, *hCos_v2_ac, *hCos_v2_bc;
-    TH1F *hEventPlaneRes_v1, *hEventPlaneRes_v2;
     THnSparseF *hD0_v1_UL, *hD0_v1_LS, *hD0_v1_MixUL, *hD0_v1_MixLS;
     THnSparseF *hD0_v2_UL, *hD0_v2_LS, *hD0_v2_MixUL, *hD0_v2_MixLS;
 
